@@ -8,11 +8,11 @@ import java.util.List;
 public class Schedule {
     private File processFile; // 进程描述文件
     private int timeSlice; // 时间片
-    private ArrayList<PCB> readyQueue; // 就绪队列
-    private ArrayList<PCB> backupReadyQueue; // 后备就绪队列
-    private ArrayList<PCB> inputWaitQueue; // 输入等待队列
-    private ArrayList<PCB> outputWaitQueue; // 输出等待队列
-    private ArrayList<PCB> otherWaitQueue; // 其他等待队列
+    private ArrayList<PCB> readyQueue = new ArrayList<>(); // 就绪队列
+    private ArrayList<PCB> backupReadyQueue = new ArrayList<>(); // 后备就绪队列
+    private ArrayList<PCB> inputWaitQueue = new ArrayList<>(); // 输入等待队列
+    private ArrayList<PCB> outputWaitQueue = new ArrayList<>(); // 输出等待队列
+    private ArrayList<PCB> otherWaitQueue = new ArrayList<>(); // 其他等待队列
     private PCB currentRunPCB; // 当前执行的 PCB
     public static boolean FLAG = false; // 调度的标志
 
@@ -118,48 +118,61 @@ public class Schedule {
     // 时间片轮转算法
     public void poll() throws InterruptedException {
         // 处理当前的 PCB 指令
-        int time = 0; // 指令剩余运行需要的时间
-        int remainTime = timeSlice; // 时间片内剩余的时间
+        int instructRemainTime = 0; // 指令剩余运行需要的时间
+        int sliceRemainTime = timeSlice; // 时间片内剩余的时间
         char name; // 当前指令的名称
-        System.out.println("当前运行的进程为:" + currentRunPCB.getProcessName());
+        System.out.println("当前运行的进程为　" + currentRunPCB.getProcessName());
         // 一个时间片内运行指令
-        while (remainTime > 0) {
+        while (sliceRemainTime > 0) {
             System.out.println("运行 "+currentRunPCB.getProcessName() + " 进程中...");
-            time = currentRunPCB.getInstructionList().get(0).getRemainTime();
+            instructRemainTime = currentRunPCB.getInstructionList().get(0).getRemainTime();
             name = currentRunPCB.getInstructionList().get(0).getName();
-            System.out.println("运行 " +name+ " 指令中...");
+            System.out.println("运行 " + name + " 指令中...");
             if(name == 'I') {
                 inputWaitQueue.add(currentRunPCB); // 添加到输入等待队列
             } else if(name == 'O') {
                 outputWaitQueue.add(currentRunPCB); // 添加到输出等待队列
             }
-            if(time <= remainTime) {
+            System.out.println("当前指令剩余需要运行的时间　" + instructRemainTime);
+            if(instructRemainTime <= sliceRemainTime) {
+                sliceRemainTime -= instructRemainTime; // 剩余的时间运行下一个指令
+                Thread.sleep(instructRemainTime * 100); // 模拟指令占用的时间，10 为 1s，即 1000ms
+                if(sliceRemainTime > 0) {
+                    System.out.println(name + "　指令运行完毕，但是时间片内的时间还有剩余，在剩余的时间开始运行下一指令");
+                } else {
+                    System.out.println(name + "　指令运行完毕，时间片内的时间没有剩余");
+                }
+                // IO指令运行完毕，在输入输出等待队列只做移除
+                if(name == 'I') {
+                    System.out.println("移除 I 指令");
+                    inputWaitQueue.remove(0);
+                } else if(name == 'O') {
+                    System.out.println("移除 Ｏ　指令");
+                    outputWaitQueue.remove(0);
+                }
                 // 当前 PCB 的指令可以在时间片规定的时间完成
                 currentRunPCB.getInstructionList().remove(0); // 移除已经完成的队首指令
-                remainTime -= time; // 剩余的时间运行下一个指令
-                Thread.sleep(time * 100); // 模拟指令占用的时间，10 为 1s，即 1000ms
-                System.out.println("运行 " + name + "指令结束，但是时间片内的时间还有剩余，在剩余的时间开始运行下一指令");
-                // IO指令运行完毕，在输入输出等待只做移除
-                if(name == 'I') {
-                    inputWaitQueue.remove(currentRunPCB);
-                } else if(name == 'O') {
-                    outputWaitQueue.remove(currentRunPCB);
+                // 如果该指令是 PCB 的最后一条指令，则直接跳出 poll() 函数，否则继续在剩余的时间内运行该 PCB 的其他指令
+                if(currentRunPCB.getInstructionList().size() == 0) {
+                    break; // PCB 运行结束
+                } else {
+                    continue; // PCB 的该指令结束，但 PCB 并未结束
                 }
-                continue;
             } else {
                 // 当前 PCB 指令不能在时间片内规定的时间完成
-                int tempTime = currentRunPCB.getInstructionList().get(0).getRemainTime() - remainTime; // 计算该指令剩余需要运行的时间
+                int tempTime = currentRunPCB.getInstructionList().get(0).getRemainTime() - sliceRemainTime; // 计算该指令剩余需要运行的时间
                 currentRunPCB.getInstructionList().get(0).setRemainTime(tempTime);
-                Thread.sleep(remainTime * 100);
-                System.out.println("运行 " + name + "指令结束, 一个时间片内的时间无法完成该指令的运行，将在下一个时间片内继续运行该指令剩余所需的时间");
+                Thread.sleep(sliceRemainTime * 100);
+                System.out.println("运行 " + name + "　指令结束, 一个时间片内的时间无法完成该指令的运行，将在下一个时间片内继续运行该指令剩余所需的时间");
                 // IO指令并未运行完毕，移除它在队首的位置，该 PCB 继续在输入输出队列排队
                 if (name == 'I') {
-                    inputWaitQueue.remove(currentRunPCB);
+                    inputWaitQueue.remove(0);
                     inputWaitQueue.add(currentRunPCB);
                 } else if(name == 'O') {
-                    outputWaitQueue.remove(currentRunPCB);
-                    outputWaitQueue.remove(currentRunPCB);
+                    outputWaitQueue.remove(0);
+                    outputWaitQueue.add(currentRunPCB);
                 }
+                break;
             }
         }
     }
@@ -167,21 +180,29 @@ public class Schedule {
     // 打印各个队列的进程名称
     public void showEveryQueue() {
         // 就绪队列
+        System.out.println("就绪队列为：");
         Schedule.showQueueProcess(readyQueue);
         // 后备就绪队列
+        System.out.println("后备就绪队列：");
         Schedule.showQueueProcess(backupReadyQueue);
         // 输入等待队列
+        System.out.println("输入等待队列：");
         Schedule.showQueueProcess(inputWaitQueue);
         // 输出等待队列
+        System.out.println("输出等待队列：");
         Schedule.showQueueProcess(outputWaitQueue);
         // 其他等待队列
+        System.out.println("其他等待队列：");
         Schedule.showQueueProcess(otherWaitQueue);
     }
 
     // 打印队列中的进程名称
     public static void showQueueProcess (ArrayList<PCB> list) {
-        for (int i = 0, size = list.size(); i < size; i++) {
-            System.out.println(list.get(i).getProcessName());
+        // 判断队列是否为空
+        if(list != null) {
+            for (int i = 0, size = list.size(); i < size; i++) {
+                System.out.println(list.get(i).getProcessName());
+            }
         }
     }
 }

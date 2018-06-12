@@ -31,16 +31,25 @@ public class Main {
         {
             Schedule.FLAG = true;
             schedule.setReadyQueue(); // 设置就绪队列PCB
+            Schedule.showQueueProcess(schedule.getReadyQueue());
             while (Schedule.FLAG == true) {
                 // 否则，运行该 PCB 中的指令
                 PCB pcb = null;
                 // 就绪队列中还有 PCB
-                if(schedule.getReadyQueue() != null) {
+                if(schedule.getReadyQueue().size() != 0) {
                     pcb = schedule.getReadyQueue().get(0);
-                    schedule.getReadyQueue().remove(0); // 就绪队列中 PCB 的移除
+                    schedule.getReadyQueue().remove(0); // 从就绪队列中移除 PCB
+                } else{
+                    // 循环结束条件
+                    // 就绪队列中的 PCB 全部运行过一次，PCB 都被放在了后备就绪队列中
+                    pcb = schedule.getBackupReadyQueue().get(0);
+                    if(schedule.getBackupReadyQueue().size() == 0) {
+                        break;
+                    } else {
+                        // TODO
+                        schedule.getBackupReadyQueue().remove(0);
+                    }
                 }
-                // 就绪队列中的 PCB 全部运行过一次，都被放在了 后备就绪队列中
-                pcb = schedule.getBackupReadyQueue().get(0);
                 schedule.setCurrentRunPCB(pcb); // 选取就绪队列的队首 PCB 作为当前执行的PCB
                 // 一个时间片内轮转的方法
                 try {
@@ -48,25 +57,28 @@ public class Main {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                // 一个时间片结束后，打印现在各个队列的进程名称
-                schedule.showEveryQueue();
 
                 // 时间轮转结束后，判断 PCB 中的指令是否已经运行完毕了
-                if(schedule.getReadyQueue().get(0).getInstructionList() == null){
+                if(pcb.getInstructionList().size() == 0){
                     // 如果是，则将该 PCB 放入其他等待队列，并将该 PCB 从后背就绪队列中移除
-                    schedule.getOtherWaitQueue();
-                    schedule.getBackupReadyQueue().remove(0); // 后备就绪队列中 PCB 的移除
+                    schedule.getOtherWaitQueue().add(pcb);
+                    schedule.getBackupReadyQueue().remove(pcb); // 后备就绪队列中 PCB 的移除
                 } else {
                     // 如果没，则将该 PCB 放入后备就绪队列，等待下一个时间片的调度
                     schedule.getBackupReadyQueue().add(pcb); // 当前的 PCB 继续添加到后备就绪队列
                 }
+
+                // 一个时间片结束后，打印现在各个队列的进程名称
+                schedule.showEveryQueue();
             }
+            System.out.println("进程调度模拟结束");
+            schedule.showEveryQueue();
         }
 
         // 暂停调度
-        {
-            Schedule.FLAG = false;
-        }
+//        {
+//            Schedule.FLAG = false;
+//        }
     }
 
     @Test
