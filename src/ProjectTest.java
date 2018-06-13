@@ -1,5 +1,6 @@
 import org.junit.Test;
 
+import java.io.File;
 import java.util.ArrayList;
 
 public class ProjectTest {
@@ -23,5 +24,12 @@ public class ProjectTest {
         System.out.println(strList.toString());
         strList.remove(0);
         System.out.println(strList.toString());
+    }
+
+
+    @Test
+    public void test03() {
+        File file = new File("D:\\Workspace\\Java\\Intellij IDEA\\ProcessSchedulingSimulation\\src\\prc.txt");
+        System.out.println(file.getParent());
     }
 }

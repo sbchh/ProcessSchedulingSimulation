@@ -1,28 +1,23 @@
 import java.awt.EventQueue;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.JButton;
-import javax.swing.JFileChooser;
 
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Toolkit;
 
-import javax.swing.JLabel;
-import javax.swing.JTextField;
-import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.util.Date;
 
 public class MainFram extends JFrame {
 
@@ -30,14 +25,15 @@ public class MainFram extends JFrame {
     JButton buttonStart;
     JButton buttonStop;
     private JTextField textFieldCurrentProcess;
-    private JList listOtherWaitQueue;
-    private JList listReadyQueue;
-    private JList listBackupReadyQueue;
-    private JList listInputWaitQueue;
-    private JList listOutputQueue;
+    private DefaultListModel listOtherWaitQueueModel;
+    private DefaultListModel listReadyQueueModel;
+    private DefaultListModel listBackupReadyQueueModel;
+    private DefaultListModel listInputWaitQueueModel;
+    private DefaultListModel listOutputWaitQueueModel;
     private JTextField textFieldTimeSlice;
 
-    Schedule schedule = new Schedule();
+    private Schedule schedule = new Schedule();
+    private boolean flag = false;
 
     /**
      * Launch the application.
@@ -100,55 +96,90 @@ public class MainFram extends JFrame {
         contentPane.add(button);
 
         buttonStart = new JButton("开始调度");
-        buttonStart.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e1) {
-                // 将调度器的标志设置为 true，并将开始按钮禁用
-                buttonStart.setEnabled(false);
-            }
-        });
         buttonStart.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                schedule.flag = true;
-                schedule.setReadyQueue(); // 设置就绪队列PCB
-                Schedule.showQueueProcess(schedule.getReadyQueue());
-                while (schedule.flag == true) {
-                    // 否则，运行该 PCB 中的指令
-                    PCB pcb = null;
-                    // 就绪队列中还有 PCB，调度的第 1 轮
-                    if(schedule.getReadyQueue().size() != 0) {
-                        pcb = schedule.getReadyQueue().get(0);
-                        schedule.getReadyQueue().remove(0); // 从就绪队列中移除 PCB
-                        schedule.getBackupReadyQueue().add(pcb);
-                    } else{
-                        // 循环结束条件
-                        // 就绪队列中的 PCB 全部运行过一次，PCB 都被放在了后备就绪队列中
-                        if(schedule.getBackupReadyQueue().size() == 0 && schedule.getReadyQueue().size() == 0) {
-                            break;
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        buttonStart.setEnabled(false);
+                        flag = true;
+                        buttonStart.setText("调度中...");
+                        schedule.setReadyQueue(); // 设置就绪队列PCB
+                        // 输出到日志文件
+                        String fileDir = schedule.getProcessFile().getParent() + "/" + Utils.DateToStr(new Date()) +"-logs.txt";
+                        File file = new File(fileDir);
+                        PrintStream out = null;
+                        try {
+                            out = new PrintStream(new FileOutputStream(file));
+                        } catch (FileNotFoundException e1) {
+                            e1.printStackTrace();
                         }
-                        pcb = schedule.getBackupReadyQueue().get(0);
-                    }
-                    schedule.setCurrentRunPCB(pcb); // 选取就绪队列的队首 PCB 作为当前执行的 PCB
-                    // 一个时间片内执行指令的方法
-                    try {
-                        schedule.runInstruction();
-                    } catch (InterruptedException e2) {
-                        e2.printStackTrace();
-                    }
+                        Schedule.showQueueProcess(schedule.getReadyQueue(), out);
+                        while (flag == true) {
+                            // 否则，运行该 PCB 中的指令
+                            PCB pcb = null;
+                            // 就绪队列中还有 PCB，调度的第 1 轮
+                            if(schedule.getReadyQueue().size() != 0) {
+                                pcb = schedule.getReadyQueue().get(0);
+                                schedule.getReadyQueue().remove(0); // 从就绪队列中移除 PCB
+                                schedule.getBackupReadyQueue().add(pcb);
+                            } else{
+                                // 循环结束条件
+                                // 就绪队列中的 PCB 全部运行过一次，PCB 都被放在了后备就绪队列中
+                                if(schedule.getBackupReadyQueue().size() == 0 && schedule.getReadyQueue().size() == 0) {
+                                    break;
+                                }
+                                pcb = schedule.getBackupReadyQueue().get(0);
+                            }
+                            schedule.setCurrentRunPCB(pcb); // 选取就绪队列的队首 PCB 作为当前执行的 PCB
+                            // 显示进程名称
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                textFieldCurrentProcess.setText(schedule.getCurrentRunPCB().getProcessName());
+                                    try {
+                                        Thread.sleep(1000);
+                                    } catch (InterruptedException e1) {
+                                        e1.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                            // 一个时间片内执行指令的方法
+                            try {
+                                schedule.runInstruction(out);
+                            } catch (InterruptedException e2) {
+                                e2.printStackTrace();
+                            }
 
-                    // 时间轮转结束后，判断 PCB 中的指令是否已经运行完毕了
-                    if(pcb.getInstructionList().size() == 0){
-                        schedule.getOtherWaitQueue().add(pcb);
-                        schedule.getBackupReadyQueue().remove(pcb);
-                    } else {
-                        schedule.getBackupReadyQueue().remove(pcb);
-                        schedule.getBackupReadyQueue().add(pcb);
+                            // 时间轮转结束后，判断 PCB 中的指令是否已经运行完毕了
+                            if(pcb.getInstructionList().size() == 0){
+                                schedule.getOtherWaitQueue().add(pcb);
+                                schedule.getBackupReadyQueue().remove(pcb);
+                            } else {
+                                schedule.getBackupReadyQueue().remove(pcb);
+                                schedule.getBackupReadyQueue().add(pcb);
+                            }
+//                            new Thread(new Runnable() {
+//                                @Override
+//                                public void run() {
+                                    // 更新每个队列控件
+                                    Utils.updateJList(listReadyQueueModel, schedule.getReadyQueue());
+                                    Utils.updateJList(listBackupReadyQueueModel, schedule.getBackupReadyQueue());
+                                    Utils.updateJList(listInputWaitQueueModel, schedule.getInputWaitQueue());
+                                    Utils.updateJList(listOutputWaitQueueModel, schedule.getOutputWaitQueue());
+                                    Utils.updateJList(listOtherWaitQueueModel, schedule.getOtherWaitQueue());
+//                                }
+//                            }).start();
+
+                            // 一个时间片结束后，打印现在各个队列的进程名称
+                            schedule.showEveryQueue(out);
+                        }
+                        textFieldCurrentProcess.setText("无");
+                        out.println("进程调度模拟结束");
+                        schedule.showEveryQueue(out);
+                        buttonStart.setText("开始调度");
                     }
-                    // 一个时间片结束后，打印现在各个队列的进程名称
-                    schedule.showEveryQueue();
-                }
-                System.out.println("进程调度模拟结束");
-                schedule.showEveryQueue();
+                }).start();
             }
         });
         buttonStart.setBackground(new Color(204, 255, 255));
@@ -158,16 +189,17 @@ public class MainFram extends JFrame {
         contentPane.add(buttonStart);
 
         buttonStop = new JButton("暂停调度");
-        buttonStop.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                // 将调度器的标志设置为 false，并将开始按钮启用
-                schedule.flag = false;
-                buttonStart.setEnabled(true);
-            }
-        });
         buttonStop.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
+                // 将调度器的标志设置为 false，并将开始按钮启用
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        flag = false;
+                        buttonStart.setEnabled(true);
+                        buttonStart.setText("开始调度");
+                    }
+                }).start();
             }
         });
         buttonStop.setBackground(new Color(204, 255, 255));
@@ -190,20 +222,17 @@ public class MainFram extends JFrame {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 schedule.setTimeSlice(Integer.parseInt(textFieldTimeSlice.getText()));
-//                JOptionPane.showMessageDialog(null, "时间片值为" + textFieldTimeSlice.getText());
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
                 schedule.setTimeSlice(Integer.parseInt(textFieldTimeSlice.getText()));
-//                JOptionPane.showMessageDialog(null, "时间片值为" + textFieldTimeSlice.getText());
 
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
                 schedule.setTimeSlice(Integer.parseInt(textFieldTimeSlice.getText()));
-//                JOptionPane.showMessageDialog(null, "时间片值为" + textFieldTimeSlice.getText());
 
             }
         });
@@ -218,6 +247,8 @@ public class MainFram extends JFrame {
         contentPane.add(label_1);
 
         textFieldCurrentProcess = new JTextField();
+        textFieldCurrentProcess.setText("无");
+        textFieldCurrentProcess.setFont(new Font("微软雅黑", Font.BOLD, 18));
         textFieldCurrentProcess.setBounds(143, 102, 86, 24);
         contentPane.add(textFieldCurrentProcess);
         textFieldCurrentProcess.setColumns(10);
@@ -228,7 +259,8 @@ public class MainFram extends JFrame {
         label_2.setBounds(40, 177, 86, 18);
         contentPane.add(label_2);
 
-        listReadyQueue = new JList();
+        listReadyQueueModel = new DefaultListModel();
+        JList listReadyQueue = new JList(listReadyQueueModel);
         listReadyQueue.setBounds(28, 208, 111, 166);
         contentPane.add(listReadyQueue);
 
@@ -238,7 +270,8 @@ public class MainFram extends JFrame {
         label_3.setBounds(180, 177, 122, 18);
         contentPane.add(label_3);
 
-        listBackupReadyQueue = new JList();
+        listBackupReadyQueueModel = new DefaultListModel();
+        JList listBackupReadyQueue = new JList(listBackupReadyQueueModel);
         listBackupReadyQueue.setBounds(180, 208, 111, 166);
         contentPane.add(listBackupReadyQueue);
 
@@ -248,7 +281,8 @@ public class MainFram extends JFrame {
         label_4.setBounds(329, 177, 128, 18);
         contentPane.add(label_4);
 
-        listInputWaitQueue = new JList();
+        listInputWaitQueueModel = new DefaultListModel();
+        JList listInputWaitQueue = new JList(listInputWaitQueueModel);
         listInputWaitQueue.setBounds(329, 208, 111, 166);
         contentPane.add(listInputWaitQueue);
 
@@ -258,9 +292,10 @@ public class MainFram extends JFrame {
         label_5.setBounds(487, 177, 128, 18);
         contentPane.add(label_5);
 
-        listOutputQueue = new JList();
-        listOutputQueue.setBounds(486, 208, 111, 166);
-        contentPane.add(listOutputQueue);
+        listOutputWaitQueueModel = new DefaultListModel();
+        JList listOutputWaitQueue = new JList(listOutputWaitQueueModel);
+        listOutputWaitQueue.setBounds(486, 208, 111, 166);
+        contentPane.add(listOutputWaitQueue);
 
         JLabel label_6 = new JLabel("其他等待队列");
         label_6.setForeground(Color.DARK_GRAY);
@@ -268,7 +303,8 @@ public class MainFram extends JFrame {
         label_6.setBounds(647, 177, 128, 18);
         contentPane.add(label_6);
 
-        listOtherWaitQueue = new JList();
+        listOtherWaitQueueModel = new DefaultListModel();
+        JList listOtherWaitQueue = new JList(listOutputWaitQueueModel);
         listOtherWaitQueue.setBounds(647, 208, 111, 166);
         contentPane.add(listOtherWaitQueue);
     }

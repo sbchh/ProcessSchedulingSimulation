@@ -1,7 +1,10 @@
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.util.Date;
 
 /**
  * 程序的主类
@@ -27,13 +30,23 @@ public class Main {
         {
             schedule.setTimeSlice(20);
         }
-
+        boolean flag = false;
         // 开始调度
         {
-            schedule.flag = true;
+            flag = true;
             schedule.setReadyQueue(); // 设置就绪队列PCB
-            Schedule.showQueueProcess(schedule.getReadyQueue());
-            while (schedule.flag == true) {
+            // 输出到日志文件
+            String fileDir = schedule.getProcessFile().getParent() + "/" + Utils.DateToStr(new Date()) +"-logs.txt";
+            System.out.println(fileDir);
+            File file = new File(fileDir);
+            PrintStream out = null;
+            try {
+                out = new PrintStream(new FileOutputStream(file));
+            } catch (FileNotFoundException e1) {
+                e1.printStackTrace();
+            }
+            Schedule.showQueueProcess(schedule.getReadyQueue(), out);
+            while (flag == true) {
                 // 否则，运行该 PCB 中的指令
                 PCB pcb = null;
                 // 就绪队列中还有 PCB，调度的第 1 轮
@@ -52,7 +65,7 @@ public class Main {
                 schedule.setCurrentRunPCB(pcb); // 选取就绪队列的队首 PCB 作为当前执行的 PCB
                 // 一个时间片内执行指令的方法
                 try {
-                    schedule.runInstruction();
+                    schedule.runInstruction(out);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -66,10 +79,10 @@ public class Main {
                     schedule.getBackupReadyQueue().add(pcb);
                 }
                 // 一个时间片结束后，打印现在各个队列的进程名称
-                schedule.showEveryQueue();
+                schedule.showEveryQueue(out);
             }
             System.out.println("进程调度模拟结束");
-            schedule.showEveryQueue();
+            schedule.showEveryQueue(out);
         }
 
         // 暂停调度
