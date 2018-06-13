@@ -115,8 +115,8 @@ public class Schedule {
         this.currentRunPCB = currentRunPCB;
     }
 
-    // 时间片轮转算法
-    public void poll() throws InterruptedException {
+    // 指令在单个时间片内的运行方法
+    public void runInstruction() throws InterruptedException {
         // 处理当前的 PCB 指令
         int instructRemainTime = 0; // 指令剩余运行需要的时间
         int sliceRemainTime = timeSlice; // 时间片内剩余的时间
@@ -124,8 +124,6 @@ public class Schedule {
         System.out.println("当前运行的进程为　" + currentRunPCB.getProcessName());
         // 一个时间片内运行指令
         while (sliceRemainTime > 0) {
-            System.out.println("运行 "+currentRunPCB.getProcessName() + " 进程中...");
-            instructRemainTime = currentRunPCB.getInstructionList().get(0).getRemainTime();
             name = currentRunPCB.getInstructionList().get(0).getName();
             System.out.println("运行 " + name + " 指令中...");
             if(name == 'I') {
@@ -133,10 +131,11 @@ public class Schedule {
             } else if(name == 'O') {
                 outputWaitQueue.add(currentRunPCB); // 添加到输出等待队列
             }
+            instructRemainTime = currentRunPCB.getInstructionList().get(0).getRemainTime();
             System.out.println("当前指令剩余需要运行的时间　" + instructRemainTime);
             if(instructRemainTime <= sliceRemainTime) {
-                sliceRemainTime -= instructRemainTime; // 剩余的时间运行下一个指令
                 Thread.sleep(instructRemainTime * 100); // 模拟指令占用的时间，10 为 1s，即 1000ms
+                sliceRemainTime -= instructRemainTime; // 剩余的时间
                 if(sliceRemainTime > 0) {
                     System.out.println(name + "　指令运行完毕，但是时间片内的时间还有剩余，在剩余的时间开始运行下一指令");
                 } else {
@@ -145,31 +144,31 @@ public class Schedule {
                 // IO指令运行完毕，在输入输出等待队列只做移除
                 if(name == 'I') {
                     System.out.println("移除 I 指令");
-                    inputWaitQueue.remove(0);
+                    inputWaitQueue.remove(currentRunPCB);
                 } else if(name == 'O') {
                     System.out.println("移除 Ｏ　指令");
-                    outputWaitQueue.remove(0);
+                    outputWaitQueue.remove(currentRunPCB);
                 }
                 // 当前 PCB 的指令可以在时间片规定的时间完成
-                currentRunPCB.getInstructionList().remove(0); // 移除已经完成的队首指令
+                currentRunPCB.getInstructionList().remove(0); // 在 PCB 中移除已经完成的指令
                 // 如果该指令是 PCB 的最后一条指令，则直接跳出 poll() 函数，否则继续在剩余的时间内运行该 PCB 的其他指令
                 if(currentRunPCB.getInstructionList().size() == 0) {
-                    break; // PCB 运行结束
+                    break; // PCB 调度结束
                 } else {
-                    continue; // PCB 的该指令结束，但 PCB 并未结束
+                    continue; // PCB 的该指令运行结束，但 PCB 并未调度结束
                 }
             } else {
                 // 当前 PCB 指令不能在时间片内规定的时间完成
                 int tempTime = currentRunPCB.getInstructionList().get(0).getRemainTime() - sliceRemainTime; // 计算该指令剩余需要运行的时间
                 currentRunPCB.getInstructionList().get(0).setRemainTime(tempTime);
                 Thread.sleep(sliceRemainTime * 100);
-                System.out.println("运行 " + name + "　指令结束, 一个时间片内的时间无法完成该指令的运行，将在下一个时间片内继续运行该指令剩余所需的时间");
+                System.out.println("运行 " + name + "　指令结束, 一个时间片内的时间无法完成该指令的运行，将在下一个时间片内继续运行该指令");
                 // IO指令并未运行完毕，移除它在队首的位置，该 PCB 继续在输入输出队列排队
                 if (name == 'I') {
-                    inputWaitQueue.remove(0);
+                    inputWaitQueue.remove(currentRunPCB);
                     inputWaitQueue.add(currentRunPCB);
                 } else if(name == 'O') {
-                    outputWaitQueue.remove(0);
+                    outputWaitQueue.remove(currentRunPCB);
                     outputWaitQueue.add(currentRunPCB);
                 }
                 break;
