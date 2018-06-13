@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class MainFram extends JFrame {
@@ -164,7 +165,7 @@ public class MainFram extends JFrame {
 //                                public void run() {
                                     // 更新每个队列控件
                                     Utils.updateJList(listReadyQueueModel, schedule.getReadyQueue());
-                                    Utils.updateJList(listBackupReadyQueueModel, schedule.getBackupReadyQueue());
+                                    Utils.updateBackupJList(listBackupReadyQueueModel, schedule.getBackupReadyQueue());
                                     Utils.updateJList(listInputWaitQueueModel, schedule.getInputWaitQueue());
                                     Utils.updateJList(listOutputWaitQueueModel, schedule.getOutputWaitQueue());
                                     Utils.updateJList(listOtherWaitQueueModel, schedule.getOtherWaitQueue());
@@ -261,6 +262,7 @@ public class MainFram extends JFrame {
 
         listReadyQueueModel = new DefaultListModel();
         JList listReadyQueue = new JList(listReadyQueueModel);
+        listReadyQueue.setFont(new Font("微软雅黑", Font.BOLD, 18));
         listReadyQueue.setBounds(28, 208, 111, 166);
         contentPane.add(listReadyQueue);
 
@@ -272,6 +274,7 @@ public class MainFram extends JFrame {
 
         listBackupReadyQueueModel = new DefaultListModel();
         JList listBackupReadyQueue = new JList(listBackupReadyQueueModel);
+        listBackupReadyQueue.setFont(new Font("微软雅黑", Font.BOLD, 18));
         listBackupReadyQueue.setBounds(180, 208, 111, 166);
         contentPane.add(listBackupReadyQueue);
 
@@ -283,6 +286,7 @@ public class MainFram extends JFrame {
 
         listInputWaitQueueModel = new DefaultListModel();
         JList listInputWaitQueue = new JList(listInputWaitQueueModel);
+        listInputWaitQueue.setFont(new Font("微软雅黑", Font.BOLD, 18));
         listInputWaitQueue.setBounds(329, 208, 111, 166);
         contentPane.add(listInputWaitQueue);
 
@@ -294,6 +298,7 @@ public class MainFram extends JFrame {
 
         listOutputWaitQueueModel = new DefaultListModel();
         JList listOutputWaitQueue = new JList(listOutputWaitQueueModel);
+        listOutputWaitQueue.setFont(new Font("微软雅黑", Font.BOLD, 18));
         listOutputWaitQueue.setBounds(486, 208, 111, 166);
         contentPane.add(listOutputWaitQueue);
 
@@ -304,7 +309,8 @@ public class MainFram extends JFrame {
         contentPane.add(label_6);
 
         listOtherWaitQueueModel = new DefaultListModel();
-        JList listOtherWaitQueue = new JList(listOutputWaitQueueModel);
+        JList listOtherWaitQueue = new JList(listOtherWaitQueueModel);
+        listOtherWaitQueue.setFont(new Font("微软雅黑", Font.BOLD, 18));
         listOtherWaitQueue.setBounds(647, 208, 111, 166);
         contentPane.add(listOtherWaitQueue);
     }

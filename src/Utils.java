@@ -15,4 +15,14 @@ public class Utils {
             model.addElement(list.get(i).getProcessName());
         }
     }
+
+    public static void updateBackupJList(DefaultListModel model, ArrayList<PCB> list) {
+        model.removeAllElements();
+        if(list.size() > 0) {
+            for(int i = 1, size = list.size(); i < size; i++){
+                model.addElement(list.get(i).getProcessName());
+            }
+        }
+
+    }
 }

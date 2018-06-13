@@ -32,4 +32,15 @@ public class ProjectTest {
         File file = new File("D:\\Workspace\\Java\\Intellij IDEA\\ProcessSchedulingSimulation\\src\\prc.txt");
         System.out.println(file.getParent());
     }
+
+    @Test
+    public void test04() {
+        ArrayList<String> arrayList = new ArrayList<>();
+        arrayList.add("1");
+        arrayList.add("2");
+        arrayList.add("3");
+        System.out.println(arrayList.toString());
+        ArrayList<String> tempList = (ArrayList<String>) arrayList.subList(1,3);
+        System.out.println(arrayList.toString());
+    }
 }
