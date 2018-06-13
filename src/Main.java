@@ -1,6 +1,7 @@
 import org.junit.Test;
 
 import java.io.File;
+import java.io.PrintStream;
 
 /**
  * 程序的主类
@@ -24,15 +25,15 @@ public class Main {
 
         // 设置调度时间片大小
         {
-            schedule.setTimeSlice(10);
+            schedule.setTimeSlice(20);
         }
 
         // 开始调度
         {
-            Schedule.FLAG = true;
+            schedule.flag = true;
             schedule.setReadyQueue(); // 设置就绪队列PCB
             Schedule.showQueueProcess(schedule.getReadyQueue());
-            while (Schedule.FLAG == true) {
+            while (schedule.flag == true) {
                 // 否则，运行该 PCB 中的指令
                 PCB pcb = null;
                 // 就绪队列中还有 PCB，调度的第 1 轮

@@ -14,7 +14,7 @@ public class Schedule {
     private ArrayList<PCB> outputWaitQueue = new ArrayList<>(); // 输出等待队列
     private ArrayList<PCB> otherWaitQueue = new ArrayList<>(); // 其他等待队列
     private PCB currentRunPCB; // 当前执行的 PCB
-    public static boolean FLAG = false; // 调度的标志
+    public boolean flag = false; // 调度的标志
 
     public File getProcessFile() {
         return processFile;
@@ -126,11 +126,11 @@ public class Schedule {
         while (sliceRemainTime > 0) {
             name = currentRunPCB.getInstructionList().get(0).getName();
             System.out.println("运行 " + name + " 指令中...");
-            if(name == 'I') {
-                inputWaitQueue.add(currentRunPCB); // 添加到输入等待队列
-            } else if(name == 'O') {
-                outputWaitQueue.add(currentRunPCB); // 添加到输出等待队列
-            }
+//            if(name == 'I') {
+//                inputWaitQueue.add(currentRunPCB); // 添加到输入等待队列
+//            } else if(name == 'O') {
+//                outputWaitQueue.add(currentRunPCB); // 添加到输出等待队列
+//            }
             instructRemainTime = currentRunPCB.getInstructionList().get(0).getRemainTime();
             System.out.println("当前指令剩余需要运行的时间　" + instructRemainTime);
             if(instructRemainTime <= sliceRemainTime) {
@@ -144,10 +144,14 @@ public class Schedule {
                 // IO指令运行完毕，在输入输出等待队列只做移除
                 if(name == 'I') {
                     System.out.println("移除 I 指令");
-                    inputWaitQueue.remove(currentRunPCB);
+                    if(inputWaitQueue.contains(currentRunPCB)) {
+                        inputWaitQueue.remove(currentRunPCB);
+                    }
                 } else if(name == 'O') {
                     System.out.println("移除 Ｏ　指令");
-                    outputWaitQueue.remove(currentRunPCB);
+                    if (outputWaitQueue.contains(currentRunPCB)) {
+                        outputWaitQueue.remove(currentRunPCB);
+                    }
                 }
                 // 当前 PCB 的指令可以在时间片规定的时间完成
                 currentRunPCB.getInstructionList().remove(0); // 在 PCB 中移除已经完成的指令
@@ -165,10 +169,14 @@ public class Schedule {
                 System.out.println("运行 " + name + "　指令结束, 一个时间片内的时间无法完成该指令的运行，将在下一个时间片内继续运行该指令");
                 // IO指令并未运行完毕，移除它在队首的位置，该 PCB 继续在输入输出队列排队
                 if (name == 'I') {
-                    inputWaitQueue.remove(currentRunPCB);
-                    inputWaitQueue.add(currentRunPCB);
+                    if(inputWaitQueue.contains(currentRunPCB)) {
+                        inputWaitQueue.remove(currentRunPCB);
+                    }
+                        inputWaitQueue.add(currentRunPCB);
                 } else if(name == 'O') {
-                    outputWaitQueue.remove(currentRunPCB);
+                    if(outputWaitQueue.contains(currentRunPCB)) {
+                        outputWaitQueue.remove(currentRunPCB);
+                    }
                     outputWaitQueue.add(currentRunPCB);
                 }
                 break;
