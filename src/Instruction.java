@@ -6,12 +6,14 @@ public class Instruction {
     private int runTime; // 单个指令需要运行的时间
     private int remainTime; // 单个指令剩余需要运行的时间
 
+
     public Instruction(char name, int runTime, int remainTime) {
         this.name = name;
         this.runTime = runTime;
         this.remainTime = remainTime;
     }
 
+    // 省略 getter 和 setter 方法
     public char getName() {
         return name;
     }

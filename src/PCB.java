@@ -7,8 +7,8 @@ import java.util.List;
 public class PCB {
     private String processName; // 进程名称
     private ArrayList<Instruction> instructionList; // 进程需要运行的指令链表
-    private int currentInstructionId; // 当前进程正在运行的指令下标
 
+    //
     public String getProcessName() {
         return processName;
     }
@@ -23,13 +23,5 @@ public class PCB {
 
     public void setInstructionList(ArrayList<Instruction> instructionList) {
         this.instructionList = instructionList;
-    }
-
-    public int getCurrentInstructionId() {
-        return currentInstructionId;
-    }
-
-    public void setCurrentInstructionId(int currentInstructionId) {
-        this.currentInstructionId = currentInstructionId;
     }
 }
